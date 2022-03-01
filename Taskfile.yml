@@ -1,0 +1,87 @@
+version: "3"
+
+silent: true
+
+vars:
+  CLUSTER_NAME: gitea-cluster
+  KUBE_PROM_NAMESPACE: gitea
+  APP_NAME: k3d-gitea
+  HELM_VERS: v3.8.0
+
+tasks:
+  install:
+    prefix: install
+    desc: |
+      will perform installation of a cluster using k3d, and install necessary
+      dependencies if they are not detected within /usr/local/bin on your machine.
+    deps: [helm:install]
+    cmds:
+      - task: k3d:create
+      - task: gitea:install
+
+  helm:install:
+    prefix: helm < install
+    desc: installs helm, using version {{.HELM_VERS}} if it does not exist in /usr/local/bin/ already.
+    cmds:
+      - wget -O helm{{.HELM_VERS}}.tar.gz https://get.helm.sh/helm-{{.HELM_VERS}}-{{OS}}-amd64.tar.gz
+      - tar -zxvf helm{{.HELM_VERS}}.tar.gz
+      - sudo mv {{OS}}-amd64/helm /usr/local/bin/helm
+      - rm helm{{.HELM_VERS}}.tar.gz
+      - rm -rf {{OS}}-amd64
+    status:
+      - test -f /usr/local/bin/helm
+
+  helm:uninstall:
+    prefix: helm > uninstall
+    desc: |
+      Uninstalls helm, by deleting the binary from /usr/local/bin. This assumes that
+      helm has been installed using this task file, in /usr/local/bin folder on macOS or linux.
+    cmds:
+      - sudo rm /usr/local/bin/helm
+
+  gitea:install:
+    prefix: gitea < install
+    desc: |
+      Installs gitea, in accordance with the custom config in the values.yaml file.
+    cmds:
+      - helm repo add gitea-charts https://dl.gitea.io/charts/
+      - helm install gitea gitea-charts/gitea --values ./sqlite-values.yaml
+
+  gitea:uninstall:
+    prefix: gitea > uninstall
+    desc: |
+      uninstalls gitea, with configuration found in ./sqlite-values.yaml
+    cmds:
+      - helm uninstall gitea
+
+  build:local:
+    prefix: build
+    desc: |
+      builds the application locally, and loads into the cluster.
+    cmds:
+      - docker build -t {{.APP_NAME}} .
+      - k3d image import {{.APP_NAME}} -c {{.CLUSTER_NAME}}
+
+  k3d:create:
+    prefix: k3d > create
+    desc: create a k3d cluster, using the name {{.CLUSTER_NAME}}
+    cmds:
+      - k3d cluster create {{.CLUSTER_NAME}}
+
+  k3d:destroy:
+    prefix: k3d < destroy
+    desc: destroy the k3d cluster with name {{.CLUSTER_NAME}}
+    cmds:
+      - k3d cluster delete {{.CLUSTER_NAME}}
+
+  k3d:start:
+    prefix: k3d > start
+    desc: start the k3d cluster, using the name {{.CLUSTER_NAME}}
+    cmds:
+      - "k3d cluster start {{.CLUSTER_NAME}}"
+
+  k3d:stop:
+    prefix: k3d > stop
+    desc: start the k3d cluster, with the name {{.CLUSTER_NAME}}
+    cmds:
+      - "k3d cluster stop {{.CLUSTER_NAME}}"
