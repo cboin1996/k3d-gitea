@@ -1,0 +1,26 @@
+version: '2'
+
+services:
+  postgresql:
+    image: docker.io/bitnami/postgresql:14
+    ports:
+      - '5432:5432'
+    volumes:
+      - './postgresql/data:/bitnami/postgresql'
+      - './postgresql/:/bitnami/postgresql/conf'
+    environment:
+      - POSTGRESQL_PASSWORD=password
+      - POSTGRESQL_DATABASE=postgres
+  pgadmin:
+    image: dpage/pgadmin4
+    depends_on:
+      - postgresql
+    ports:
+      - "5555:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    restart: unless-stopped
+volumes:
+  postgresql_data:
+    driver: local

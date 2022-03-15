@@ -1,1 +1,9 @@
+# Test charts
 helm-chart
+hack
+
+# Postgres
+postgresql/data/**
+
+# Python
+venv

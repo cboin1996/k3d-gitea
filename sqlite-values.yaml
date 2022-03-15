@@ -1,8 +1,8 @@
 gitea:
   admin:
     #existingSecret: gitea-admin-secret
-    username: gitea_admin
-    password: r8sA8CPHD9!bt6d
+    username: superuser
+    password: password
     email: "gitea@local.domain"
 
   metrics:
@@ -11,9 +11,10 @@ gitea:
       enabled: false
       #  additionalLabels:
       #    prometheus-release: prom1
-  config:
-    database:
-      DB_TYPE: sqlite3
+  config: {}
+  # # uncomment to enable sqlite3
+    # database:
+    #   DB_TYPE: sqlite3
   # # Uncomment the startup probe to enable and modify it for your needs.
   # startupProbe:
   #   tcpSocket:
@@ -24,7 +25,7 @@ gitea:
   #   successThreshold: 1
   #   failureThreshold: 10
 postgresql:
-  enabled: false
+  enabled: true
   global:
     postgresql:
       postgresqlDatabase: gitea
@@ -32,7 +33,7 @@ postgresql:
       postgresqlPassword: gitea
       servicePort: 5432
   persistence:
-    size: 10Gi
+    size: 1Gi
 
 memcached:
   enabled: false
