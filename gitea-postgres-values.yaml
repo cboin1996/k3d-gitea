@@ -1,0 +1,45 @@
+gitea:
+  admin:
+    #existingSecret: gitea-admin-secret
+    username: superuser
+    password: password
+    email: "gitea@local.domain"
+
+  metrics:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+      #  additionalLabels:
+      #    prometheus-release: prom1
+  config: {}
+  # uncomment to enable sqlite3
+    # database:
+    #   DB_TYPE: sqlite3
+  # # Uncomment the startup probe to enable and modify it for your needs.
+  # startupProbe:
+  #   tcpSocket:
+  #     port: http
+  #   initialDelaySeconds: 60
+  #   timeoutSeconds: 1
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   failureThreshold: 10
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      postgresqlDatabase: gitea
+      postgresqlUsername: gitea
+      postgresqlPassword: gitea
+      servicePort: 5432
+  persistence:
+    size: 1Gi
+
+memcached:
+  enabled: false
+  service:
+    port: 11211
+
+# By default, removed or moved settings that still remain in a user defined values.yaml will cause Helm to fail running the install/update.
+# Set it to false to skip this basic validation check.
+checkDeprecation: true
