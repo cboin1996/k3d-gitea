@@ -18,15 +18,33 @@ tasks:
     cmds:
       - task: k3d:create
       - task: gitea:install
-      - sh: mkdir postgresql/data
-      - sh: sudo chown -R 1001:1001 postgresql # Bitnami runs as non-root, so need to give permissions.
+      - task: postgres:install
+      - task: pgadmin:install
+  
+  uninstall:
+    prefix: uninstall
+    desc: |
+      will uninstall the entire cluster.
+    cmds:
+      - k3d cluster delete {{.CLUSTER_NAME}}
 
   build:
     prefix: build
     desc: |
       builds using docker compose and runs the container.
+    deps: [docker:prepare]
     cmds:
       - docker-compose up
+
+  docker:prepare: 
+    prefix: docker < install
+    desc: prepare directory structure for using bitnami postgres docker image.
+    cmds:
+      - sh: mkdir postgresql/data # directory for docker image.
+      - sh: sudo chown -R 1001:1001 postgresql # Bitnami runs as non-root, so need to give permissions.
+    status: 
+      - test -d ./postgresql
+
   helm:install:
     prefix: helm < install
     desc: installs helm, using version {{.HELM_VERS}} if it does not exist in /usr/local/bin/ already.
@@ -50,25 +68,62 @@ tasks:
   gitea:install:
     prefix: gitea < install
     desc: |
-      Installs gitea, in accordance with the custom config in the sqlite-values.yaml file.
+      Installs gitea, in accordance with the custom config in the gitea-postgres-values.yaml file.
     cmds:
       - helm repo add gitea-charts https://dl.gitea.io/charts/
-      - helm install gitea gitea-charts/gitea --values ./sqlite-values.yaml
+      - helm install gitea gitea-charts/gitea --values ./gitea-postgres-values.yaml
 
   gitea:upgrade:
     prefix: gitea < upgrade
     desc: |
       Upgrade the helm chart.
     cmds:
-      - helm upgrade gitea gitea-charts/gitea --values sqlite-values.yaml
+      - helm upgrade gitea gitea-charts/gitea --values gitea-postgres-values.yaml
 
   gitea:uninstall:
     prefix: gitea > uninstall
     desc: |
-      uninstalls gitea, with configuration found in ./sqlite-values.yaml
+      uninstalls gitea, with configuration found in gitea-postgres-values.yaml
     cmds:
       - helm uninstall gitea
-      
+  
+  pgadmin:install:
+    prefix: pgadmin > install
+    desc: |
+      installs pgadmin.
+    cmds:
+      - helm repo add runix https://helm.runix.net
+      - helm install pgadmin4 runix/pgadmin4
+    
+  pgadmin:uninstall:
+    prefix: pgadmin < uninstall
+    desc: |
+      uninstalls pgadmin.
+    cmds:
+      - helm uninstall pgadmin4
+
+  postgres:install:
+    prefix: postgres > install
+    desc: |
+      installs postgres.
+    cmds:
+      - helm repo add bitnami https://charts.bitnami.com/bitnami
+      - helm install postgres bitnami/postgresql
+    
+  postgres:uninstall:
+    prefix: postgres < uninstall
+    desc: |
+      uninstalls postgres.
+    cmds:
+      - helm uninstall postgres
+
+  postgres:password:
+    prefix: postgres < password
+    desc: |
+      get the root postgres user password and store it in clipboard
+    cmds:
+      - kubectl get secret --namespace default postgres-postgresql -o jsonpath="{.data.postgres-password}" | base64 --decode | xsel -i -b
+
   k3d:create:
     prefix: k3d > create
     desc: create a k3d cluster, using the name {{.CLUSTER_NAME}}

@@ -18,13 +18,19 @@ helm template . --values ../sqlite-values.yaml
 
 # Description
 
-## [sqlite-values.yaml](sqlite-values.yaml)
-YAML file for deploying gitea.
+## [gitea-postgres-values.yaml](gitea-sqlite-values.yaml)
+YAML file for deploying gitea with postgres enabled.
+
+## [gitea-sqlite-values.yaml](gitea-sqlite-values.yaml)
+YAML file for deploying gitea with sqlite enabled.
+
+## [postgres-values.yaml](gitea-sqlite-values.yaml)
+Helm values file for bitnami's postgres chart: https://github.com/bitnami/charts/tree/master/bitnami/postgresql
 
 ## [docker-compose.yaml](docker-compose.yml)
-Docker compose for installing postgres locally using docker
+Docker compose for installing postgres locally using docker.
 
 ## [main.go](main.go)
-Go file for configuring postgres for use with gitea. 
+Entrypoint for golang cli for configuring postgres for use with gitea. 
 See [database preparation](https://docs.gitea.io/en-us/database-prep/#postgresql) for
 examples of configuring databases with gitea.
