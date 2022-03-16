@@ -31,6 +31,6 @@ Helm values file for bitnami's postgres chart: https://github.com/bitnami/charts
 Docker compose for installing postgres locally using docker.
 
 ## [main.go](main.go)
-Go file for configuring postgres for use with gitea. 
+Entrypoint for golang cli for configuring postgres for use with gitea. 
 See [database preparation](https://docs.gitea.io/en-us/database-prep/#postgresql) for
 examples of configuring databases with gitea.
