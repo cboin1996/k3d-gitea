@@ -2,6 +2,9 @@
 helm-chart
 hack
 
+# Go
+k3d-gitea
+
 # Postgres
 postgresql/data/**
 

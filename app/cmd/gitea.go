@@ -117,7 +117,7 @@ postgresql:
       postgresqlDatabase: gitea
       postgresqlUsername: gitea
       postgresqlPassword: gitea
-      servicePort: '5432'
+      servicePort: 5432
   persistence:
     size: 1Gi
 

@@ -1,49 +1,58 @@
 version: "3"
 
 silent: true
+output: prefixed
 
 vars:
   CLUSTER_NAME: gitea-cluster
   KUBE_PROM_NAMESPACE: gitea
   APP_NAME: k3d-gitea
   HELM_VERS: v3.8.0
-
+  GITEA_VERSION: 5.0.3
+  POSTGRES_VERSION: 14.2.0
+  IMAGE_NAME: k3d-gitea
 tasks:
+  
   install:
     prefix: install
     desc: |
-      will perform installation of a cluster using k3d, and install necessary
-      dependencies if they are not detected within /usr/local/bin on your machine.
+      will perform installation of a cluster using k3d, clone the gitea repo, and install
+      gitea + postgres using the go cli.
     deps: [helm:install]
     cmds:
       - task: k3d:create
+      - task: argocd:install
+      - task: go:build
       - task: gitea:install
-      - task: postgres:install
-      - task: pgadmin:install
-  
+
+  configure:
+    prefix: configure
+    desc: |
+      configures the gitea installation using the go cli.
+    cmds:
+      - k3d-gitea psqlinit --psqlsecret ""
+
   uninstall:
     prefix: uninstall
     desc: |
       will uninstall the entire cluster.
     cmds:
       - k3d cluster delete {{.CLUSTER_NAME}}
-
-  build:
-    prefix: build
+  
+  go:build:
+    prefix: go < build
     desc: |
-      builds using docker compose and runs the container.
-    deps: [docker:prepare]
+      builds the go application.
     cmds:
-      - docker-compose up
+      - go build -v
+    dir: app
 
-  docker:prepare: 
-    prefix: docker < install
-    desc: prepare directory structure for using bitnami postgres docker image.
+  docker:build:
+    prefix: docker < build
+    desc: |
+      runs the multi-stage docker build
     cmds:
-      - sh: mkdir postgresql/data # directory for docker image.
-      - sh: sudo chown -R 1001:1001 postgresql # Bitnami runs as non-root, so need to give permissions.
-    status: 
-      - test -d ./postgresql
+      - docker build . --build-arg GITEA_VERSION={{.GITEA_VERSION}} -t {{.IMAGE_NAME}}
 
   helm:install:
     prefix: helm < install
@@ -65,27 +74,51 @@ tasks:
     cmds:
       - sudo rm /usr/local/bin/helm
 
+  argocd:install:
+    prefix: argocd > install
+    desc: installs arcgocd cluster wide, and sets up namespace for gitea
+    cmds:
+      - kubectl create ns argocd
+      - kubectl create ns gitea
+      - kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-cd/release-2.3/manifests/install.yaml -n argocd
+      - task: argocd:password
+
+  argocd:uninstall:
+    prefix: argocd < uninstall
+    desc: uninstalls argocd
+    cmds:
+      - kubectl delete ns argocd
+      - kubectl delete ns gitea
+  
+  argocd:password:
+    prefix: argocd < password
+    desc: get the password stored in argocd-initial-admin-secret
+    cmds:
+      - "echo username: admin"
+      - kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo 
+
   gitea:install:
     prefix: gitea < install
-    desc: |
-      Installs gitea, in accordance with the custom config in the gitea-postgres-values.yaml file.
-    cmds:
-      - helm repo add gitea-charts https://dl.gitea.io/charts/
-      - helm install gitea gitea-charts/gitea --values ./gitea-postgres-values.yaml
+    desc: installs gitea using the go cli
+    cmds: 
+      - ./k3d-gitea gitea --chartPath ../helm-chart
+    dir: app
 
-  gitea:upgrade:
-    prefix: gitea < upgrade
+  gitea:clone:
+    prefix: gitea < clone
     desc: |
-      Upgrade the helm chart.
+      Clones gitea. Checks out the latest branch.
     cmds:
-      - helm upgrade gitea gitea-charts/gitea --values gitea-postgres-values.yaml
+      - git clone https://gitea.com/gitea/helm-chart.git
+      - cd helm-chart && git checkout v{{.GITEA_VERSION}} && helm dependency build
+    dir: helm
 
   gitea:uninstall:
     prefix: gitea > uninstall
     desc: |
-      uninstalls gitea, with configuration found in gitea-postgres-values.yaml
+      uninstalls gitea.
     cmds:
-      - helm uninstall gitea
+      - helm uninstall gitea -n gitea
   
   pgadmin:install:
     prefix: pgadmin > install
@@ -108,7 +141,7 @@ tasks:
       installs postgres.
     cmds:
       - helm repo add bitnami https://charts.bitnami.com/bitnami
-      - helm install postgres bitnami/postgresql
+      - helm install postgres bitnami/postgresql --version {{.POSTGRES_VERSION}}
     
   postgres:uninstall:
     prefix: postgres < uninstall
